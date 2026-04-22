@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 version = "0.6.3"
-name = "omni_camera"
+name = "pynokhwa"
 requires-python = ">=3.9"
 classifiers = [
     "Programming Language :: Rust",

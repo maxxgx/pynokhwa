@@ -1,10 +1,10 @@
-# OmniCamera
+# pynokhwa
 A library for querying and capturing from cameras, based on [nokhwa](https://github.com/l1npengtul/nokhwa) crate.
 
 # Examples
 Query available cameras:
 ```python
-print(*omni_camera.query(), sep='\n')
+print(*pynokhwa.query(), sep='\n')
 ```
 Example output:
 ```
@@ -14,9 +14,9 @@ CameraInfo(index=0, name='USB2.0 VGA UVC WebCam: USB2.0 V', description='Video4L
 
 Save an image (note: requires pillow to be installed):
 ```python
-import omni_camera
+import pynokhwa
 import time
-cam = omni_camera.Camera(omni_camera.query()[0]) # Open a camera
+cam = pynokhwa.Camera(pynokhwa.query()[0]) # Open a camera
 while cam.poll_frame_pil() is None: # Note that .poll_frame_* functions never blocks
     time.sleep(0.1) # Wait until we get at least one frame from the camera
 #time.sleep(1) # You might want to wait a bit longer while camera is calibrating

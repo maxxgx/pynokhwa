@@ -2,23 +2,26 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Dict, List, Union
 import warnings
-from . import omni_camera
+from . import pynokhwa
 import sys
+
 try:
     import numpy as np
 except ImportError:
-    print("[OmniCamera] Could not import numpy", file=sys.stderr)
+    print("[pynokhwa] Could not import numpy", file=sys.stderr)
 
 try:
     from PIL import Image
 except ImportError:
-    print("[OmniCamera] Could not import pillow", file=sys.stderr)
+    print("[pynokhwa] Could not import pillow", file=sys.stderr)
+
 
 @dataclass
 class CameraInfo:
     """
     Describes a connected camera.
     """
+
     index: int
     name: str
     description: str
@@ -28,7 +31,7 @@ class CameraInfo:
         """
         Check if this camera can be opened.
         """
-        return omni_camera.check_can_use(self.index)
+        return pynokhwa.check_can_use(self.index)
 
 
 class FrameFormat(Enum):
@@ -40,9 +43,9 @@ class FrameFormat(Enum):
 
 
 class CameraFormat:
-    def __init__(self, cam_format: omni_camera.CamFormat):
+    def __init__(self, cam_format: pynokhwa.CamFormat):
         self._fmt = cam_format
-    
+
     @property
     def width(self) -> int:
         return self._fmt.width
@@ -58,9 +61,11 @@ class CameraFormat:
     @property
     def frame_format(self) -> FrameFormat:
         return FrameFormat(self._fmt.format)
-    
+
     def __str__(self) -> str:
-        return f"{self.frame_format.value} {self.width}x{self.height}@{self.frame_rate}fps"
+        return (
+            f"{self.frame_format.value} {self.width}x{self.height}@{self.frame_rate}fps"
+        )
 
 
 class CameraFormatOptions(list):
@@ -73,29 +78,30 @@ class CameraFormatOptions(list):
         """
         Prefer formats for which func is true.
         """
-        options = CameraFormatOptions(
-            filter(func, self)
-            )
+        options = CameraFormatOptions(filter(func, self))
         if not options:
             return self
         return options
 
     def _prefer_range(self, val_getter, min_val=None, max_val=None):
-        return self.prefer(lambda x: (min_val is None or val_getter(x)>=min_val) and (max_val is None or val_getter(x)<=max_val))
-    
-    def prefer_fps_range(self, min_fps: int=None, max_fps: int=None):
+        return self.prefer(
+            lambda x: (min_val is None or val_getter(x) >= min_val)
+            and (max_val is None or val_getter(x) <= max_val)
+        )
+
+    def prefer_fps_range(self, min_fps: int = None, max_fps: int = None):
         """
         Prefer formats with min_fps <= frame_rate <= max_fps.
         """
         return self._prefer_range(lambda x: x.frame_rate, min_fps, max_fps)
 
-    def prefer_width_range(self, min_width: int=None, max_width: int=None):
+    def prefer_width_range(self, min_width: int = None, max_width: int = None):
         """
         Prefer formats with min_width <= width <= max_width.
         """
         return self._prefer_range(lambda x: x.width, min_width, max_width)
-    
-    def prefer_height_range(self, min_heigth: int=None, max_height: int=None):
+
+    def prefer_height_range(self, min_heigth: int = None, max_height: int = None):
         """
         Prefer formats with min_heigth <= height <= max_height.
         """
@@ -105,15 +111,17 @@ class CameraFormatOptions(list):
         """
         Prefer formats with width / height == width_by_height
         """
-        return self.prefer(lambda x: abs(x.width/x.height-width_by_height) < 1e-6)
+        return self.prefer(lambda x: abs(x.width / x.height - width_by_height) < 1e-6)
 
     def prefer_sides_ratio(self, width_by_height: float):
-        warnings.warn("prefer_sides_ratio has been renamed to prefer_aspect_ratio", DeprecationWarning)
+        warnings.warn(
+            "prefer_sides_ratio has been renamed to prefer_aspect_ratio",
+            DeprecationWarning,
+        )
         return self.prefer_aspect_ratio(width_by_height)
 
     def prefer_frame_format(self, fmt: FrameFormat):
         return self.prefer(lambda x: x.frame_format is fmt)
-    
 
     def resolve(self, key=lambda x: x.width) -> CameraFormat:
         """
@@ -126,27 +134,26 @@ class CameraFormatOptions(list):
         Pick the format with the highest resolution.
         If multiple formats have the same resolution, pick the one with the highest framerate.
         """
-        return max(
-            formats,
-            key=lambda f: (f.width, f.height, f.frame_rate)
-        )
+        return max(formats, key=lambda f: (f.width, f.height, f.frame_rate))
 
     def find_highest_framerate(formats: List[CameraFormat]) -> CameraFormat:
         """
         Pick the format with the highest framerate.
         If multiple formats have the same framerate, pick the one with the highest resolution.
         """
-        return max(
-            formats,
-            key=lambda f: (f.frame_rate, f.width, f.height)
-        )
+        return max(formats, key=lambda f: (f.frame_rate, f.width, f.height))
 
     def resolve_default(self) -> CameraFormat:
         """
         Like resolve, but applies some default preferences.
         Used when camera is opened automatically.
         """
-        return self.prefer_fps_range(25, 60).prefer_sides_ratio(4/3).prefer_frame_format(FrameFormat.MJPEG).resolve()
+        return (
+            self.prefer_fps_range(25, 60)
+            .prefer_sides_ratio(4 / 3)
+            .prefer_frame_format(FrameFormat.MJPEG)
+            .resolve()
+        )
 
 
 class CameraControl:
@@ -188,7 +195,7 @@ class CameraControl:
         0 <= *fraction* <= 1 should be true.
         """
         assert 0 <= fraction <= 1
-        ind = round(fraction * (len(self.value_range)-1))
+        ind = round(fraction * (len(self.value_range) - 1))
         self.set_value(self.value_range[ind])
 
 
@@ -200,8 +207,8 @@ class Camera:
         """
         self.info = info
         self._initialized = False
-        self._cam = omni_camera.Camera(info.index)
-    
+        self._cam = pynokhwa.Camera(info.index)
+
     def get_format_options(self) -> CameraFormatOptions:
         """
         Returns a list of supported CameraFormat objects.
@@ -261,7 +268,7 @@ class Camera:
         shape = (h, w, 3)
         arr = np.frombuffer(data, dtype=np.uint8)
         return arr.reshape(shape)
-    
+
     def poll_frame_pil(self) -> Union["Image.Image", None]:
         """
         Get a frame from the camera. Returns a pillow image.
@@ -271,7 +278,7 @@ class Camera:
         if frame is None:
             return None
         return Image.frombytes("RGB", (frame[0], frame[1]), frame[2])
-    
+
     def _info(self):
         return self._cam.info()
 
@@ -280,8 +287,7 @@ def query(only_usable=True) -> list[CameraInfo]:
     """
     Returns a list of CameraInfo objects, one for every available camera.
     """
-    result = map(lambda x: CameraInfo(*x), omni_camera.query())
+    result = map(lambda x: CameraInfo(*x), pynokhwa.query())
     if only_usable:
         result = filter(CameraInfo.can_open, result)
     return list(result)
-

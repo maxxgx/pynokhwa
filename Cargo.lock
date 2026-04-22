@@ -820,7 +820,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "omni_camera"
+name = "pynokhwa"
 version = "0.6.3"
 dependencies = [
  "image",

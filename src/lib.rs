@@ -23,7 +23,7 @@ static CAMERA_REGISTRY: Lazy<Mutex<HashMap<u32, Weak<CameraInternal>>>> =    Laz
 
 #[pyfunction]
 pub fn query() -> PyResult<Vec<(u32, String, String, String)>> {
-    println!("[omni_camera] query() called — using Nokhwa backend");
+    println!("[pynokhwa] query() called — using Nokhwa backend");
 
     let devices = match nokhwa::query(ApiBackend::Auto) {
         Ok(val) => val,
@@ -76,22 +76,22 @@ pub fn check_can_use(index: u32) -> PyResult<bool> {
 
     match result {
         Ok(Ok(_)) => {
-            // println!("\t[omni_camera] Camera {} opened successfully", index);
+            // println!("\t[pynokhwa] Camera {} opened successfully", index);
             Ok(true)
         }
         Ok(Err(err)) => {
-            // println!("\t[omni_camera] Failed to open camera {}: {:?}", index, err);
+            // println!("\t[pynokhwa] Failed to open camera {}: {:?}", index, err);
             Ok(false)
         }
         Err(_) => {
-            // println!("\t[omni_camera] Panic while opening camera {}!", index);
+            // println!("\t[pynokhwa] Panic while opening camera {}!", index);
             Ok(false) // return False instead of crashing Python
         }
     }
 }
 
 #[pymodule]
-fn omni_camera<'py>(m: &Bound<'py, PyModule>) -> PyResult<()> {
+fn pynokhwa<'py>(m: &Bound<'py, PyModule>) -> PyResult<()> {
     nokhwa::nokhwa_initialize(|_| {});
     m.add_function(wrap_pyfunction!(query, m)?)?;
     m.add_function(wrap_pyfunction!(check_can_use, m)?)?;
@@ -147,7 +147,7 @@ impl CameraInternal {
                             return;
                         }
                     } else {
-                        eprintln!("[omni_camera] Tried to start, but camera was closed!");
+                        eprintln!("[pynokhwa] Tried to start, but camera was closed!");
                         running.store(false, atomic::Ordering::SeqCst);
                         return;
                     }
@@ -201,7 +201,7 @@ impl CameraInternal {
             });
 
             *self.worker.lock() = Some(handle);
-            println!("[omni_camera] worker thread started"); // fixed log
+            println!("[pynokhwa] worker thread started"); // fixed log
         } else {
             // Check if the requested format matches the current camera format that is already streaming.
             let (have_cam, matches, current_fmt_opt) = {
@@ -241,18 +241,18 @@ impl CameraInternal {
     }
 
     fn close(&self) {
-        println!("[omni_camera] Closing camera (conditional)...");
+        println!("[pynokhwa] Closing camera (conditional)...");
         let remaining = self.active_count.fetch_sub(1, atomic::Ordering::SeqCst).saturating_sub(1);
-        println!("[omni_camera] Remaining active users = {}", remaining);
+        println!("[pynokhwa] Remaining active users = {}", remaining);
 
         if remaining == 0 {
-            println!("[omni_camera] Last active user — requesting worker shutdown.");
+            println!("[pynokhwa] Last active user — requesting worker shutdown.");
             self.running.store(false, atomic::Ordering::SeqCst);
 
             // Join worker before mutating camera state
             if let Some(handle) = self.worker.lock().take() {
                 let _ = handle.join();
-                println!("[omni_camera] Worker joined.");
+                println!("[pynokhwa] Worker joined.");
             }
 
             // Now it’s safe to clear buffers and release the camera
@@ -267,7 +267,7 @@ impl CameraInternal {
             let mut reg = CAMERA_REGISTRY.lock().unwrap();
             reg.retain(|_, weak| weak.upgrade().is_some());
         } else {
-            println!("[omni_camera] Other users still streaming; keeping worker alive.");
+            println!("[pynokhwa] Other users still streaming; keeping worker alive.");
         }
     }
 
@@ -280,7 +280,7 @@ impl CameraInternal {
 impl Drop for CameraInternal {
     fn drop(&mut self) {
         let remaining = self.active_count.load(atomic::Ordering::SeqCst);
-        println!("[omni_camera] Dropping CameraInternal — active users = {}", remaining);
+        println!("[pynokhwa] Dropping CameraInternal — active users = {}", remaining);
 
         // Ensure shutdown if someone forgot to call close()
         self.running.store(false, atomic::Ordering::SeqCst);
@@ -298,7 +298,7 @@ impl Drop for CameraInternal {
         let mut reg = CAMERA_REGISTRY.lock().unwrap();
         reg.retain(|_, weak| weak.upgrade().is_some());
 
-        println!("[omni_camera] CameraInternal dropped cleanly.");
+        println!("[pynokhwa] CameraInternal dropped cleanly.");
     }
 }
 #[derive(Clone)]
@@ -489,7 +489,7 @@ impl Camera {
             let reg = CAMERA_REGISTRY.lock().unwrap();
             if let Some(existing_weak) = reg.get(&index) {
                 if let Some(existing_cam) = existing_weak.upgrade() {
-                    println!("[omni_camera] Reusing existing CameraInternal for index {}", index);
+                    println!("[pynokhwa] Reusing existing CameraInternal for index {}", index);
                     return Ok(Camera { cam: existing_cam });
                 }
             }
