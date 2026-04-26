@@ -241,54 +241,71 @@ class Camera:
         self._cam.close()
         self._initialized = False
 
+    def _poll_raw(self) -> Union[tuple[int, int, bytes, int], None]:
+        """Shared implementation: returns (w, h, raw_rgb_bytes, seq) or None."""
+        if not self._initialized:
+            self.open()
+        self._cam.check_err()
+        return self._cam.poll_frame_with_seq()
+
     def poll_frame_raw(self) -> Union[tuple[int, int, bytes], None]:
         """
         Get a frame from the camera. Returns width, height, and array of raw rgb values.
         Guaranteed to never block, but may return None if no frames were received from camera yet.
         """
-        if not self._initialized:
-            self.open()
-        self._cam.check_err()
-        return self._cam.poll_frame()
+        result = self._poll_raw()
+        if result is None:
+            return None
+        w, h, data, _seq = result
+        return (w, h, data)
 
     def poll_frame_raw_with_seq(self) -> Union[tuple[int, int, bytes, int], None]:
         """
-        Like poll_frame_raw(), but also returns the hardware frame sequence number.
+        Like poll_frame_raw(), but also returns the frame sequence number.
         The sequence increments only when the camera produces a genuinely new frame.
         Returns (width, height, raw_rgb_bytes, sequence) or None.
         """
-        if not self._initialized:
-            self.open()
-        self._cam.check_err()
-        return self._cam.poll_frame_with_seq()
+        return self._poll_raw()
+
+    @staticmethod
+    def _raw_to_np(w, h, data):
+        expected_size = w * h * 3
+        if len(data) > expected_size:
+            data = data[:expected_size]
+        return np.frombuffer(data, dtype=np.uint8).reshape((h, w, 3))
 
     def poll_frame_np(self) -> Union["np.ndarray", None]:
         """
         Get a frame from the camera. Returns a numpy array.
         Guaranteed to never block, but may return None if no frames were received from camera yet.
         """
-        frame = self.poll_frame_raw()
-        if frame is None:
+        result = self._poll_raw()
+        if result is None:
             return None
-        w, h, data = frame
+        w, h, data, _seq = result
+        return self._raw_to_np(w, h, data)
 
-        expected_size = w * h * 3
-        if len(data) > expected_size:
-            data = data[:expected_size]
-
-        shape = (h, w, 3)
-        arr = np.frombuffer(data, dtype=np.uint8)
-        return arr.reshape(shape)
+    def poll_frame_np_with_seq(self) -> Union[tuple["np.ndarray", int], None]:
+        """
+        Like poll_frame_np(), but also returns the frame sequence number.
+        Returns (numpy_array, sequence) or None.
+        """
+        result = self._poll_raw()
+        if result is None:
+            return None
+        w, h, data, seq = result
+        return self._raw_to_np(w, h, data), seq
 
     def poll_frame_pil(self) -> Union["Image.Image", None]:
         """
         Get a frame from the camera. Returns a pillow image.
         Guaranteed to never block, but may return None if no frames were received from camera yet.
         """
-        frame = self.poll_frame_raw()
-        if frame is None:
+        result = self._poll_raw()
+        if result is None:
             return None
-        return Image.frombytes("RGB", (frame[0], frame[1]), frame[2])
+        w, h, data, _seq = result
+        return Image.frombytes("RGB", (w, h), data)
 
     def _info(self):
         return self._cam.info()
