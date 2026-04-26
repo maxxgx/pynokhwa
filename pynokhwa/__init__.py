@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from enum import Enum
 from typing import Dict, List, Union
+import os
 import warnings
 from . import pynokhwa
 import sys
@@ -8,12 +9,12 @@ import sys
 try:
     import numpy as np
 except ImportError:
-    print("[pynokhwa] Could not import numpy", file=sys.stderr)
+    pass
 
 try:
     from PIL import Image
 except ImportError:
-    print("[pynokhwa] Could not import pillow", file=sys.stderr)
+    pass
 
 
 @dataclass
@@ -26,6 +27,8 @@ class CameraInfo:
     name: str
     description: str
     misc: str
+    unique_id: str = ""
+    id_stable: bool = False
 
     def can_open(self):
         """
@@ -200,14 +203,64 @@ class CameraControl:
 
 
 class Camera:
-    def __init__(self, info: CameraInfo, suggested_fps: int = 25):
+    def __init__(self, info: Union[CameraInfo, int, str], suggested_fps: int = 25):
         """
         Open a camera corresponding to the info object.
         Will try to use maximum possible resolution with a frame rate of at least *suggested_fps*
         """
-        self.info = info
+        if isinstance(info, CameraInfo):
+            self.info = info
+            camera_id = self._open_token_for_info(info)
+        else:
+            self.info = None
+            camera_id = self._open_token_for_id(info)
+            if camera_id is None:
+                raise ValueError(f"Could not resolve camera unique_id: {info}")
         self._initialized = False
-        self._cam = pynokhwa.Camera(info.index)
+        self._cam = pynokhwa.Camera(camera_id)
+
+    @staticmethod
+    def _open_token_for_info(info: CameraInfo) -> Union[int, str]:
+        unique_id = info.unique_id or info.misc
+        if not unique_id:
+            return info.index
+        token = Camera._open_token_for_id(unique_id)
+        if token is None:
+            return info.index
+        return token
+
+    @staticmethod
+    def _open_token_for_id(camera_id: Union[int, str]) -> Union[int, str, None]:
+        if isinstance(camera_id, int):
+            return camera_id
+
+        if camera_id.startswith("index:"):
+            try:
+                return int(camera_id.removeprefix("index:"))
+            except ValueError:
+                return None
+
+        if camera_id.isdigit():
+            return int(camera_id)
+
+        if sys.platform.startswith("linux"):
+            index = Camera._linux_unique_id_to_index(camera_id)
+            if index is not None:
+                return index
+            return None
+
+        return camera_id
+
+    @staticmethod
+    def _linux_unique_id_to_index(unique_id: str) -> Union[int, None]:
+        path = os.path.realpath(unique_id)
+        name = os.path.basename(path)
+        if not name.startswith("video"):
+            return None
+        try:
+            return int(name.removeprefix("video"))
+        except ValueError:
+            return None
 
     def get_format_options(self) -> CameraFormatOptions:
         """

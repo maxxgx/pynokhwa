@@ -12,19 +12,88 @@ use parking_lot::FairMutex;
 use pyo3::{
     exceptions::{PyRuntimeError, PyValueError},
     prelude::*,
-    types::PyBytes,
+    types::{PyAny, PyBytes},
 };
 
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use std::sync::atomic::Ordering;
 
-static CAMERA_REGISTRY: Lazy<Mutex<HashMap<u32, Weak<CameraInternal>>>> =    Lazy::new(|| Mutex::new(HashMap::new()));
+static CAMERA_REGISTRY: Lazy<Mutex<HashMap<String, Weak<CameraInternal>>>> =
+    Lazy::new(|| Mutex::new(HashMap::new()));
+
+fn camera_registry_key(index: &CameraIndex) -> String {
+    match index {
+        CameraIndex::Index(index) => format!("index:{index}"),
+        CameraIndex::String(id) => format!("id:{id}"),
+    }
+}
+
+/// Resolve either an int index or a string unique_id to the same canonical key,
+/// so opening the same physical camera by either form hits the same registry entry.
+fn canonical_registry_key(camera_index: &CameraIndex) -> String {
+    if let Ok(devices) = nokhwa::query(ApiBackend::Auto) {
+        for device in devices {
+            let idx = match *device.index() {
+                CameraIndex::Index(n) => n,
+                _ => continue,
+            };
+            let misc = device.misc();
+            let matches = match camera_index {
+                CameraIndex::Index(n) => *n == idx,
+                CameraIndex::String(s) => !misc.is_empty() && misc == *s,
+            };
+            if matches {
+                let (uid, stable) = stable_unique_id(idx, &misc);
+                return if stable {
+                    format!("id:{uid}")
+                } else {
+                    format!("index:{idx}")
+                };
+            }
+        }
+    }
+    camera_registry_key(camera_index)
+}
+
+fn stable_unique_id(index: u32, misc: &str) -> (String, bool) {
+    if !misc.is_empty() {
+        return (misc.to_string(), true);
+    }
+
+    match linux_unique_id(index) {
+        Some(id) => (id, true),
+        None => (format!("index:{index}"), false),
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn linux_unique_id(index: u32) -> Option<String> {
+    let video_name = format!("video{index}");
+    let by_id = std::path::Path::new("/dev/v4l/by-id");
+
+    if let Ok(entries) = std::fs::read_dir(by_id) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if let Ok(target) = std::fs::read_link(&path) {
+                if target.file_name().and_then(|name| name.to_str()) == Some(video_name.as_str())
+                {
+                    return Some(path.to_string_lossy().into_owned());
+                }
+            }
+        }
+    }
+
+    None
+}
+
+#[cfg(not(target_os = "linux"))]
+fn linux_unique_id(_index: u32) -> Option<String> {
+    None
+}
 
 #[pyfunction]
-pub fn query() -> PyResult<Vec<(u32, String, String, String)>> {
-    println!("[pynokhwa] query() called — using Nokhwa backend");
-
+pub fn query() -> PyResult<Vec<(u32, String, String, String, String, bool)>> {
     let devices = match nokhwa::query(ApiBackend::Auto) {
         Ok(val) => val,
         Err(error) => return Err(PyRuntimeError::new_err(error.to_string())),
@@ -32,19 +101,19 @@ pub fn query() -> PyResult<Vec<(u32, String, String, String)>> {
 
     let mut result = Vec::new();
 
-    // Map by index for quick lookup
-    let mut seen_indices = std::collections::HashSet::new();
-
     // Add devices normally found by nokhwa
     for device in devices.into_iter() {
         if let CameraIndex::Index(index) = *device.index() {
+            let misc = device.misc();
+            let (unique_id, id_stable) = stable_unique_id(index, &misc);
             result.push((
                 index,
                 device.human_name(),
                 device.description().to_owned(),
-                device.misc(),
+                misc,
+                unique_id,
+                id_stable,
             ));
-            seen_indices.insert(index);
         }
     }
 
@@ -59,7 +128,7 @@ pub fn check_can_use(index: u32) -> PyResult<bool> {
 
     {
         let reg = CAMERA_REGISTRY.lock().unwrap();
-        if let Some(weak) = reg.get(&index) {
+        if let Some(weak) = reg.get(&canonical_registry_key(&CameraIndex::Index(index))) {
             if weak.upgrade().is_some() {
                 return Ok(true);
             }
@@ -152,7 +221,7 @@ impl CameraInternal {
                             return;
                         }
                     } else {
-                        eprintln!("[pynokhwa] Tried to start, but camera was closed!");
+                        *last_err.lock() = Some(nokhwa::NokhwaError::GeneralError("Camera was closed before worker could start".into()));
                         running.store(false, atomic::Ordering::SeqCst);
                         return;
                     }
@@ -208,7 +277,6 @@ impl CameraInternal {
             });
 
             *self.worker.lock() = Some(handle);
-            println!("[pynokhwa] worker thread started"); // fixed log
         } else {
             // Check if the requested format matches the current camera format that is already streaming.
             let (have_cam, matches, current_fmt_opt) = {
@@ -248,23 +316,18 @@ impl CameraInternal {
     }
 
     fn close(&self) {
-        println!("[pynokhwa] Closing camera (conditional)...");
         let prev = self.active_count.load(atomic::Ordering::SeqCst);
         if prev == 0 {
-            println!("[pynokhwa] close() called but active_count is already 0 — ignoring.");
             return;
         }
         let remaining = self.active_count.fetch_sub(1, atomic::Ordering::SeqCst).saturating_sub(1);
-        println!("[pynokhwa] Remaining active users = {}", remaining);
 
         if remaining == 0 {
-            println!("[pynokhwa] Last active user — requesting worker shutdown.");
             self.running.store(false, atomic::Ordering::SeqCst);
 
             // Join worker before mutating camera state
             if let Some(handle) = self.worker.lock().take() {
                 let _ = handle.join();
-                println!("[pynokhwa] Worker joined.");
             }
 
             // Now it’s safe to clear buffers and release the camera
@@ -279,8 +342,6 @@ impl CameraInternal {
 
             let mut reg = CAMERA_REGISTRY.lock().unwrap();
             reg.retain(|_, weak| weak.upgrade().is_some());
-        } else {
-            println!("[pynokhwa] Other users still streaming; keeping worker alive.");
         }
     }
 
@@ -293,9 +354,6 @@ impl CameraInternal {
 
 impl Drop for CameraInternal {
     fn drop(&mut self) {
-        let remaining = self.active_count.load(atomic::Ordering::SeqCst);
-        println!("[pynokhwa] Dropping CameraInternal — active users = {}", remaining);
-
         // Ensure shutdown if someone forgot to call close()
         self.running.store(false, atomic::Ordering::SeqCst);
         if let Some(handle) = self.worker.lock().take() {
@@ -311,8 +369,6 @@ impl Drop for CameraInternal {
 
         let mut reg = CAMERA_REGISTRY.lock().unwrap();
         reg.retain(|_, weak| weak.upgrade().is_some());
-
-        println!("[pynokhwa] CameraInternal dropped cleanly.");
     }
 }
 #[derive(Clone)]
@@ -491,19 +547,29 @@ impl CamControl {
 
 #[pyclass]
 struct Camera {
-    cam: Arc<CameraInternal>
+    cam: Arc<CameraInternal>,
 }
 
 #[pymethods]
 impl Camera {
     #[new]
-    fn new(index: u32) -> PyResult<Camera> {
+    fn new(index: &Bound<'_, PyAny>) -> PyResult<Camera> {
+        let camera_index = if let Ok(index) = index.extract::<u32>() {
+            CameraIndex::Index(index)
+        } else if let Ok(id) = index.extract::<String>() {
+            CameraIndex::String(id)
+        } else {
+            return Err(PyValueError::new_err(
+                "Camera index must be an int index or string unique_id",
+            ));
+        };
+        let registry_key = canonical_registry_key(&camera_index);
+
         // Step 1: Check registry for existing
         {
             let reg = CAMERA_REGISTRY.lock().unwrap();
-            if let Some(existing_weak) = reg.get(&index) {
+            if let Some(existing_weak) = reg.get(&registry_key) {
                 if let Some(existing_cam) = existing_weak.upgrade() {
-                    println!("[pynokhwa] Reusing existing CameraInternal for index {}", index);
                     return Ok(Camera { cam: existing_cam });
                 }
             }
@@ -511,7 +577,7 @@ impl Camera {
 
         // Step 2: Create new nokhwa camera
         let raw_cam = match nokhwa::Camera::new(
-            CameraIndex::Index(index),
+            camera_index,
             RequestedFormat::new::<RgbFormat>(RequestedFormatType::None),
         ) {
             Ok(c) => c,
@@ -522,7 +588,7 @@ impl Camera {
         let internal = Arc::new(CameraInternal::new(raw_cam));
         {
             let mut reg = CAMERA_REGISTRY.lock().unwrap();
-            reg.insert(index, Arc::downgrade(&internal));
+            reg.insert(registry_key, Arc::downgrade(&internal));
         }
 
         Ok(Camera { cam: internal })
