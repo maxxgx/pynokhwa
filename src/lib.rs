@@ -103,13 +103,18 @@ fn pynokhwa<'py>(m: &Bound<'py, PyModule>) -> PyResult<()> {
 
 type Image = ImageBuffer<Rgb<u8>, Vec<u8>>;
 
+struct FrameSnapshot {
+    seq: u64,
+    frame: Arc<Option<Image>>,
+}
+
 #[derive(Clone)]
 struct CameraInternal {
     camera: Arc<FairMutex<Option<nokhwa::Camera>>>,
     active_count: Arc<atomic::AtomicUsize>,
     running: Arc<atomic::AtomicBool>,                // NEW
     worker: Arc<FairMutex<Option<std::thread::JoinHandle<()>>>>, // NEW
-    last_frame: Arc<FairMutex<Arc<Option<Image>>>>,
+    last_frame: Arc<FairMutex<FrameSnapshot>>,
     last_err: Arc<FairMutex<Option<nokhwa::NokhwaError>>>,
 }
 impl CameraInternal {
@@ -119,7 +124,7 @@ impl CameraInternal {
             active_count: Arc::new(atomic::AtomicUsize::new(0)),
             running: Arc::new(atomic::AtomicBool::new(false)),      // NEW
             worker: Arc::new(FairMutex::new(None)),                  // NEW
-            last_frame: Arc::new(FairMutex::new(Arc::new(None))),
+            last_frame: Arc::new(FairMutex::new(FrameSnapshot { seq: 0, frame: Arc::new(None) })),
             last_err: Arc::new(FairMutex::new(None)),
         }
     }
@@ -174,7 +179,9 @@ impl CameraInternal {
                                 let (w, h) = (img.width(), img.height());
                                 let raw = img.into_raw();
                                 if let Some(buf) = ImageBuffer::from_raw(w, h, raw) {
-                                    *last_frame.lock() = Arc::new(Some(buf));
+                                    let mut snapshot = last_frame.lock();
+                                    snapshot.seq += 1;
+                                    snapshot.frame = Arc::new(Some(buf));
                                 }
                             }
                         }
@@ -242,6 +249,11 @@ impl CameraInternal {
 
     fn close(&self) {
         println!("[pynokhwa] Closing camera (conditional)...");
+        let prev = self.active_count.load(atomic::Ordering::SeqCst);
+        if prev == 0 {
+            println!("[pynokhwa] close() called but active_count is already 0 — ignoring.");
+            return;
+        }
         let remaining = self.active_count.fetch_sub(1, atomic::Ordering::SeqCst).saturating_sub(1);
         println!("[pynokhwa] Remaining active users = {}", remaining);
 
@@ -261,7 +273,8 @@ impl CameraInternal {
                 // camera stream already stopped on worker; just drop it
                 let _ = cam_guard.take();
             }
-            *self.last_frame.lock() = Arc::new(None);
+            self.last_frame.lock().frame = Arc::new(None);
+            // seq intentionally NOT reset — stays monotonic for CameraInternal lifetime
             *self.last_err.lock() = None;
 
             let mut reg = CAMERA_REGISTRY.lock().unwrap();
@@ -271,8 +284,9 @@ impl CameraInternal {
         }
     }
 
-    fn last_frame(&self) -> Arc<Option<ImageBuffer<Rgb<u8>, Vec<u8>>>> {
-        Arc::clone(&self.last_frame.lock())
+    fn last_frame(&self) -> (Arc<Option<ImageBuffer<Rgb<u8>, Vec<u8>>>>, u64) {
+        let snapshot = self.last_frame.lock();
+        (Arc::clone(&snapshot.frame), snapshot.seq)
     }
 
 }
@@ -292,7 +306,7 @@ impl Drop for CameraInternal {
         if let Some(mut cam) = self.camera.lock().take() {
             let _ = cam.stop_stream();
         }
-        *self.last_frame.lock() = Arc::new(None);
+        self.last_frame.lock().frame = Arc::new(None);
         *self.last_err.lock() = None;
 
         let mut reg = CAMERA_REGISTRY.lock().unwrap();
@@ -552,10 +566,21 @@ impl Camera {
     }
 
     fn poll_frame(&self, py: Python) -> PyResult<Option<(u32, u32, Py<PyBytes>)>> {
-        match &*self.cam.last_frame() {
+        let (frame_arc, _seq) = self.cam.last_frame();
+        match &*frame_arc {
             Some(frame) => {
-                let bytes = PyBytes::new_bound(py, frame.as_raw());
+                let bytes = PyBytes::new(py, frame.as_raw());
                 Ok(Some((frame.width(), frame.height(), bytes.into())))
+            }
+            None => Ok(None),
+        }
+    }
+    fn poll_frame_with_seq(&self, py: Python) -> PyResult<Option<(u32, u32, Py<PyBytes>, u64)>> {
+        let (frame_arc, seq) = self.cam.last_frame();
+        match &*frame_arc {
+            Some(frame) => {
+                let bytes = PyBytes::new(py, frame.as_raw());
+                Ok(Some((frame.width(), frame.height(), bytes.into(), seq)))
             }
             None => Ok(None),
         }
@@ -746,13 +771,17 @@ mod tests {
         std::thread::sleep(Duration::from_millis(200));
 
         // --- 5. Try to grab an initial frame to size the window ---
-        let mut frame_opt = wrapper.last_frame();
+        let mut frame_opt = {
+            let (f, _seq) = wrapper.last_frame();
+            f
+        };
         let frame = loop {
             if let Some(ref img) = *frame_opt {
                 break img.clone();
             }
             std::thread::sleep(Duration::from_millis(50));
-            frame_opt = wrapper.last_frame();
+            let (f, _seq) = wrapper.last_frame();
+            frame_opt = f;
         };
 
         let width = frame.width() as usize;
@@ -772,7 +801,7 @@ mod tests {
 
         // --- 6. Live display loop ---
         while window.is_open() && !window.is_key_down(Key::Escape) {
-            let latest_frame = wrapper.last_frame();
+            let (latest_frame, _seq) = wrapper.last_frame();
             if let Some(ref img) = *latest_frame {
                 // Convert ImageBuffer<Rgb<u8>> into a u32 buffer for minifb
                 let mut buffer: Vec<u32> = Vec::with_capacity(width * height);
@@ -795,6 +824,53 @@ mod tests {
         // --- 7. Shutdown ---
         println!("Shutting down...");
         wrapper.close();
+    }
+
+    #[test]
+    fn test_frame_snapshot_seq_increments() {
+        use crate::FrameSnapshot;
+        use image::{ImageBuffer, Rgb};
+        use std::sync::Arc;
+
+        let snapshot_mutex = parking_lot::FairMutex::new(FrameSnapshot {
+            seq: 0,
+            frame: Arc::new(None),
+        });
+
+        // Initial state: seq=0, frame=None
+        {
+            let s = snapshot_mutex.lock();
+            assert_eq!(s.seq, 0);
+            assert!(s.frame.is_none());
+        }
+
+        // Simulate worker storing a frame: seq should advance
+        {
+            let mut s = snapshot_mutex.lock();
+            s.seq += 1;
+            s.frame = Arc::new(Some(ImageBuffer::from_pixel(2, 2, Rgb([255u8, 0, 0]))));
+        }
+        {
+            let s = snapshot_mutex.lock();
+            assert_eq!(s.seq, 1);
+            assert!(s.frame.is_some());
+        }
+
+        // Two reads without worker update: seq stays the same
+        let seq1 = snapshot_mutex.lock().seq;
+        let seq2 = snapshot_mutex.lock().seq;
+        assert_eq!(seq1, seq2);
+
+        // Simulate close: clear frame, seq stays monotonic
+        {
+            let mut s = snapshot_mutex.lock();
+            s.frame = Arc::new(None);
+        }
+        {
+            let s = snapshot_mutex.lock();
+            assert_eq!(s.seq, 1);
+            assert!(s.frame.is_none());
+        }
     }
 
 }

@@ -251,6 +251,17 @@ class Camera:
         self._cam.check_err()
         return self._cam.poll_frame()
 
+    def poll_frame_raw_with_seq(self) -> Union[tuple[int, int, bytes, int], None]:
+        """
+        Like poll_frame_raw(), but also returns the hardware frame sequence number.
+        The sequence increments only when the camera produces a genuinely new frame.
+        Returns (width, height, raw_rgb_bytes, sequence) or None.
+        """
+        if not self._initialized:
+            self.open()
+        self._cam.check_err()
+        return self._cam.poll_frame_with_seq()
+
     def poll_frame_np(self) -> Union["np.ndarray", None]:
         """
         Get a frame from the camera. Returns a numpy array.
