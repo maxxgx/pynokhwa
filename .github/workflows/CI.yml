@@ -138,6 +138,7 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
+    environment: pypi
     if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
     needs: [linux, windows, macos, sdist]
     permissions:
@@ -153,11 +154,12 @@ jobs:
         uses: actions/attest-build-provenance@v1
         with:
           subject-path: 'wheels-*/*'
+      - name: Merge wheels into dist
+        run: |
+          mkdir dist
+          cp wheels-*/* dist/
       - name: Publish to PyPI
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
-        uses: PyO3/maturin-action@v1
-        env:
-          MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          command: upload
-          args: --non-interactive --skip-existing wheels-*/*
+          packages-dir: dist/
