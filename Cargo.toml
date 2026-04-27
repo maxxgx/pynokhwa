@@ -1,6 +1,6 @@
 [package]
 name = "pynokhwa"
-version = "0.6.3"
+version = "0.1.0"
 edition = "2021"
 readme = "README.md"
 

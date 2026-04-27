@@ -3,7 +3,7 @@ requires = ["maturin>=1.1"]
 build-backend = "maturin"
 
 [project]
-version = "0.6.3"
+version = "0.1.0"
 name = "pynokhwa"
 requires-python = ">=3.9"
 classifiers = [
