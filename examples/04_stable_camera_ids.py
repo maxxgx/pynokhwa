@@ -8,7 +8,7 @@ udev symlink is available. The `id_stable` field indicates whether the ID is dur
 
 import pynokhwa
 
-cameras = pynokhwa.query(only_usable=False)
+cameras = pynokhwa.query(only_usable=True)
 if not cameras:
     raise SystemExit("No cameras found")
 
