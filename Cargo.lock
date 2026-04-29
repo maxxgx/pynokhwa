@@ -4,9 +4,9 @@ version = 4
 
 [[package]]
 name = "aho-corasick"
-version = "1.1.3"
+version = "1.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8e60d3430d3a69478ad0993f19238d2df97c507009a52b3c10addcd7f6bcb916"
+checksum = "ddd31a130427c27518df266943a5308ed92d4b226cc639f5a8f1002816174301"
 dependencies = [
  "memchr",
 ]
@@ -84,9 +84,9 @@ checksum = "8f1fe948ff07f4bd06c30984e69f5b4899c516a3ef74f34df92a2df2ab535495"
 
 [[package]]
 name = "bytes"
-version = "1.10.1"
+version = "1.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d71b6127be86fdcfddb610f7182ac57211d4b18a3e9c82eb2d17662f2227ad6a"
+checksum = "1e748733b7cbc798e1434b6ac524f0c1ff2ab456fe201501e6497c8417a4fc33"
 
 [[package]]
 name = "cc"
@@ -450,11 +450,11 @@ checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
 
 [[package]]
 name = "home"
-version = "0.5.11"
+version = "0.5.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "589533453244b0995c858700322199b2becb13b627df2851f64a2775d024abcf"
+checksum = "cc627f471c528ff0c4a49e1d5e60450c8f6461dd6d10ba9dcd3a61d3dff7728d"
 dependencies = [
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -699,9 +699,9 @@ dependencies = [
 
 [[package]]
 name = "nasm-rs"
-version = "0.3.1"
+version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "34f676553b60ccbb76f41f9ae8f2428dac3f259ff8f1c2468a174778d06a1af9"
+checksum = "706bf8a5e8c8ddb99128c3291d31bd21f4bcde17f0f4c20ec678d85c74faa149"
 dependencies = [
  "jobserver",
  "log",
@@ -722,7 +722,7 @@ dependencies = [
 [[package]]
 name = "nokhwa"
 version = "0.10.9"
-source = "git+https://github.com/arendjankramer/nokhwa.git?rev=17c0ee4b6fc8eae1fbdfa21f33c7076e27f666c0#17c0ee4b6fc8eae1fbdfa21f33c7076e27f666c0"
+source = "git+https://github.com/maxxgx/nokhwa.git?rev=66297505945f3fd0556e0aa04965bbb649fd649f#66297505945f3fd0556e0aa04965bbb649fd649f"
 dependencies = [
  "flume",
  "image",
@@ -738,7 +738,7 @@ dependencies = [
 [[package]]
 name = "nokhwa-bindings-linux"
 version = "0.1.2"
-source = "git+https://github.com/arendjankramer/nokhwa.git?rev=17c0ee4b6fc8eae1fbdfa21f33c7076e27f666c0#17c0ee4b6fc8eae1fbdfa21f33c7076e27f666c0"
+source = "git+https://github.com/maxxgx/nokhwa.git?rev=66297505945f3fd0556e0aa04965bbb649fd649f#66297505945f3fd0556e0aa04965bbb649fd649f"
 dependencies = [
  "nokhwa-core",
  "v4l",
@@ -747,7 +747,7 @@ dependencies = [
 [[package]]
 name = "nokhwa-bindings-macos"
 version = "0.2.3"
-source = "git+https://github.com/arendjankramer/nokhwa.git?rev=17c0ee4b6fc8eae1fbdfa21f33c7076e27f666c0#17c0ee4b6fc8eae1fbdfa21f33c7076e27f666c0"
+source = "git+https://github.com/maxxgx/nokhwa.git?rev=66297505945f3fd0556e0aa04965bbb649fd649f#66297505945f3fd0556e0aa04965bbb649fd649f"
 dependencies = [
  "block",
  "cocoa-foundation",
@@ -763,7 +763,7 @@ dependencies = [
 [[package]]
 name = "nokhwa-bindings-windows"
 version = "0.4.4"
-source = "git+https://github.com/arendjankramer/nokhwa.git?rev=17c0ee4b6fc8eae1fbdfa21f33c7076e27f666c0#17c0ee4b6fc8eae1fbdfa21f33c7076e27f666c0"
+source = "git+https://github.com/maxxgx/nokhwa.git?rev=66297505945f3fd0556e0aa04965bbb649fd649f#66297505945f3fd0556e0aa04965bbb649fd649f"
 dependencies = [
  "nokhwa-core",
  "once_cell",
@@ -773,7 +773,7 @@ dependencies = [
 [[package]]
 name = "nokhwa-core"
 version = "0.1.7"
-source = "git+https://github.com/arendjankramer/nokhwa.git?rev=17c0ee4b6fc8eae1fbdfa21f33c7076e27f666c0#17c0ee4b6fc8eae1fbdfa21f33c7076e27f666c0"
+source = "git+https://github.com/maxxgx/nokhwa.git?rev=66297505945f3fd0556e0aa04965bbb649fd649f#66297505945f3fd0556e0aa04965bbb649fd649f"
 dependencies = [
  "bytes",
  "image",
@@ -1078,9 +1078,9 @@ dependencies = [
 
 [[package]]
 name = "regex"
-version = "1.12.2"
+version = "1.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "843bc0191f75f3e22651ae5f1e72939ab2f72a4bc30fa80a066bd66edefc24d4"
+checksum = "e10754a14b9137dd7b1e3e5b0493cc9171fdd105e0ab477f51b72e7f3ac0e276"
 dependencies = [
  "aho-corasick",
  "memchr",
@@ -1090,9 +1090,9 @@ dependencies = [
 
 [[package]]
 name = "regex-automata"
-version = "0.4.13"
+version = "0.4.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5276caf25ac86c8d810222b3dbb938e512c55c6831a10f3e6ed1c93b84041f1c"
+checksum = "6e1dd4122fc1595e8162618945476892eefca7b88c52820e74af6262213cae8f"
 dependencies = [
  "aho-corasick",
  "memchr",
@@ -1101,15 +1101,15 @@ dependencies = [
 
 [[package]]
 name = "regex-syntax"
-version = "0.8.8"
+version = "0.8.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7a2d987857b319362043e95f5353c0535c1f58eec5336fdfcf626430af7def58"
+checksum = "dc897dd8d9e8bd1ed8cdad82b5966c3e0ecae09fb1907d58efaa013543185d0a"
 
 [[package]]
 name = "rgb"
-version = "0.8.52"
+version = "0.8.53"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0c6a884d2998352bb4daf0183589aec883f16a6da1f4dde84d8e2e9a5409a1ce"
+checksum = "47b34b781b31e5d73e9fbc8689c70551fd1ade9a19e3e28cfec8580a79290cc4"
 dependencies = [
  "bytemuck",
 ]

@@ -11,7 +11,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 pyo3 = { version = "0.23.4", features = ["extension-module", "macros", "abi3-py39", "generate-import-lib"] }
-nokhwa = { git="https://github.com/arendjankramer/nokhwa.git", rev="17c0ee4b6fc8eae1fbdfa21f33c7076e27f666c0", features = ["input-v4l", "input-msmf", "output-threaded", "input-avfoundation", "input-native"] }
+nokhwa = { git="https://github.com/maxxgx/nokhwa.git", rev="66297505945f3fd0556e0aa04965bbb649fd649f", features = ["input-v4l", "input-msmf", "output-threaded", "input-avfoundation", "input-native"] }
 #nokhwa = { path = "vendor/nokhwa", features = ["input-v4l", "input-msmf", "output-threaded", "input-avfoundation", "input-native"] }
 image = { version="0.25.6", default-features = false }
 parking_lot = "^0.11"
