@@ -385,6 +385,24 @@ struct CamFormat {
 
 #[pymethods]
 impl CamFormat {
+    /// Construct a `CamFormat` directly, e.g. to request a resolution that wasn't
+    /// surfaced by `Camera.get_formats()` (some v4l2 sensors report a stepwise
+    /// resolution range rather than a fixed list; the driver will accept/clamp
+    /// whatever is actually valid when the format is set).
+    #[new]
+    fn new(width: u32, height: u32, frame_rate: u32, format: String) -> PyResult<Self> {
+        // Default value is overwritten by set_format below; only used to satisfy
+        // the struct literal before validating `format`.
+        let mut cam_format = CamFormat {
+            width,
+            height,
+            frame_rate,
+            format: FrameFormat::MJPEG,
+        };
+        cam_format.set_format(format)?;
+        Ok(cam_format)
+    }
+
     #[getter]
     fn get_format(&self) -> String {
         match self.format {
@@ -394,6 +412,8 @@ impl CamFormat {
             FrameFormat::NV12 => "nv12".to_string(),
             FrameFormat::RAWRGB => "rawrgb".to_string(),
             FrameFormat::RAWBGR => "rawbgr".to_string(),
+            FrameFormat::BA10 => "ba10".to_string(),
+            FrameFormat::BA12 => "ba12".to_string(),
         }
     }
     //#[setter]
@@ -405,10 +425,14 @@ impl CamFormat {
             "nv12" => FrameFormat::NV12,
             "rawrgb" => FrameFormat::RAWRGB,
             "rawbgr" => FrameFormat::RAWBGR,
+            // Raw 10-/12-bit Bayer GRBG straight off a v4l2 sensor (V4L2_PIX_FMT_SGRBG10/12,
+            // fourcc "BA10"/"BA12"), demosaiced to RGB888 on decode.
+            "ba10" => FrameFormat::BA10,
+            "ba12" => FrameFormat::BA12,
 
             _ => {
                 return Err(PyValueError::new_err(
-                    "Unsupported value (should be one of 'mjpeg', 'yuyv')",
+                    "Unsupported value (should be one of 'mjpeg', 'yuyv', 'gray', 'nv12', 'rawrgb', 'rawbgr', 'ba10', 'ba12')",
                 ))
             }
         };
