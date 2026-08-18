@@ -19,6 +19,9 @@ use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use std::sync::atomic::Ordering;
 
+#[cfg(target_os = "linux")]
+mod linux_media_topology;
+
 static CAMERA_REGISTRY: Lazy<Mutex<HashMap<String, Weak<CameraInternal>>>> =
     Lazy::new(|| Mutex::new(HashMap::new()));
 
@@ -84,7 +87,9 @@ fn linux_unique_id(index: u32) -> Option<String> {
         }
     }
 
-    None
+    // CSI/MIPI sensors have no by-id entry; fall back to the sensor name from
+    // the media-controller graph, which encodes the I2C bus and address.
+    linux_media_topology::sensor_name(index).map(|name| format!("sensor:{name}"))
 }
 
 #[cfg(not(target_os = "linux"))]
@@ -724,6 +729,21 @@ mod tests {
         }
 
         // not necessarily non-zero, but should not crash
+        assert!(devices.len() >= 0);
+    }
+
+    #[test]
+    fn test_query_cameras_pyfunction() {
+        // Exercises the #[pyfunction] `query()` exposed to Python, including the
+        // stable_unique_id resolution baked into each row.
+        let devices = crate::query().expect("Failed to query cameras");
+        println!("Found {} devices", devices.len());
+        for (index, human_name, description, misc, unique_id, id_stable) in &devices {
+            println!(
+                "index={index} name={human_name:?} description={description:?} misc={misc:?} unique_id={unique_id:?} id_stable={id_stable}"
+            );
+        }
+
         assert!(devices.len() >= 0);
     }
 

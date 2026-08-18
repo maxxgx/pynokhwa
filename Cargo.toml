@@ -9,13 +9,23 @@ readme = "README.md"
 name = "pynokhwa"
 crate-type = ["cdylib"]
 
+[features]
+# `cargo test` links a plain executable, which can't use pyo3's "extension-module"
+# (that mode expects Python symbols to be supplied by an embedding interpreter at
+# dlopen time, not resolved at link time). Default on for normal/maturin builds;
+# run `cargo test --no-default-features` to build tests against libpython instead.
+default = ["pyo3/extension-module"]
+
 [dependencies]
-pyo3 = { version = "0.29.0", features = ["extension-module", "macros", "abi3-py39", "generate-import-lib"] }
+pyo3 = { version = "0.29.0", features = ["macros", "abi3-py39", "generate-import-lib"] }
 nokhwa = { git="https://github.com/maxxgx/nokhwa.git", tag="v0.10.12", features = ["input-v4l", "input-msmf", "output-threaded", "input-avfoundation", "input-native"] }
 #nokhwa = { path = "vendor/nokhwa", features = ["input-v4l", "input-msmf", "output-threaded", "input-avfoundation", "input-native"] }
 image = { version="0.25.6", default-features = false }
 parking_lot = "^0.11"
 once_cell = "1.21.3"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+libc = "0.2"
 
 [dev-dependencies]
 minifb = "0.25"

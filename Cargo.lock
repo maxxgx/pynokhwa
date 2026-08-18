@@ -1013,6 +1013,7 @@ name = "pynokhwa"
 version = "0.1.2"
 dependencies = [
  "image",
+ "libc",
  "minifb",
  "nokhwa",
  "once_cell",
