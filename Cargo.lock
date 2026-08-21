@@ -90,9 +90,9 @@ checksum = "fc652a48c352aef3ea3aed32080501cf3ef6ed5da78602a020c991775b0aff04"
 
 [[package]]
 name = "cc"
-version = "1.4.3"
+version = "1.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "509591b7bcd67f4ef775afad7662703b4935daaa6ec0e5605cfb1090b32a2b6d"
+checksum = "0ad534f4357a5264cce5019c989cf66a4f0dc4e0d1b1d15f8aacec0ff7360273"
 dependencies = [
  "find-msvc-tools",
  "jobserver",
@@ -706,8 +706,8 @@ dependencies = [
 
 [[package]]
 name = "nokhwa"
-version = "0.10.12"
-source = "git+https://github.com/maxxgx/nokhwa.git?tag=v0.10.13#b86cbf574688abde7c21664a6edf228e1a0f5e75"
+version = "0.10.13"
+source = "git+https://github.com/maxxgx/nokhwa.git?tag=v0.10.13#a8e00d9ce5952cb043ae37d098d80ff097d39a7c"
 dependencies = [
  "flume",
  "image",
@@ -723,7 +723,7 @@ dependencies = [
 [[package]]
 name = "nokhwa-bindings-linux"
 version = "0.1.2"
-source = "git+https://github.com/maxxgx/nokhwa.git?tag=v0.10.13#b86cbf574688abde7c21664a6edf228e1a0f5e75"
+source = "git+https://github.com/maxxgx/nokhwa.git?tag=v0.10.13#a8e00d9ce5952cb043ae37d098d80ff097d39a7c"
 dependencies = [
  "libc",
  "nokhwa-core",
@@ -733,7 +733,7 @@ dependencies = [
 [[package]]
 name = "nokhwa-bindings-macos"
 version = "0.2.3"
-source = "git+https://github.com/maxxgx/nokhwa.git?tag=v0.10.13#b86cbf574688abde7c21664a6edf228e1a0f5e75"
+source = "git+https://github.com/maxxgx/nokhwa.git?tag=v0.10.13#a8e00d9ce5952cb043ae37d098d80ff097d39a7c"
 dependencies = [
  "block",
  "cocoa-foundation",
@@ -744,12 +744,13 @@ dependencies = [
  "nokhwa-core",
  "objc",
  "once_cell",
+ "regex",
 ]
 
 [[package]]
 name = "nokhwa-bindings-windows"
 version = "0.4.4"
-source = "git+https://github.com/maxxgx/nokhwa.git?tag=v0.10.13#b86cbf574688abde7c21664a6edf228e1a0f5e75"
+source = "git+https://github.com/maxxgx/nokhwa.git?tag=v0.10.13#a8e00d9ce5952cb043ae37d098d80ff097d39a7c"
 dependencies = [
  "nokhwa-core",
  "once_cell",
@@ -759,7 +760,7 @@ dependencies = [
 [[package]]
 name = "nokhwa-core"
 version = "0.1.7"
-source = "git+https://github.com/maxxgx/nokhwa.git?tag=v0.10.13#b86cbf574688abde7c21664a6edf228e1a0f5e75"
+source = "git+https://github.com/maxxgx/nokhwa.git?tag=v0.10.13#a8e00d9ce5952cb043ae37d098d80ff097d39a7c"
 dependencies = [
  "bytes",
  "image",
