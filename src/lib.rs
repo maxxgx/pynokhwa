@@ -38,13 +38,13 @@ fn canonical_registry_key(camera_index: &CameraIndex) -> String {
                 CameraIndex::Index(n) => n,
                 _ => continue,
             };
-            let misc = device.misc();
+            let device_meta_json = device.device_meta_json();
             let matches = match camera_index {
                 CameraIndex::Index(n) => *n == idx,
-                CameraIndex::String(s) => !misc.is_empty() && misc == *s,
+                CameraIndex::String(s) => !device_meta_json.is_empty() && device_meta_json == *s,
             };
             if matches {
-                let (uid, stable) = stable_unique_id(idx, &misc);
+                let (uid, stable) = stable_unique_id(idx, &device_meta_json);
                 return if stable {
                     format!("id:{uid}")
                 } else {
@@ -56,9 +56,9 @@ fn canonical_registry_key(camera_index: &CameraIndex) -> String {
     camera_registry_key(camera_index)
 }
 
-fn stable_unique_id(index: u32, misc: &str) -> (String, bool) {
-    if !misc.is_empty() {
-        return (misc.to_string(), true);
+fn stable_unique_id(index: u32, device_meta_json: &str) -> (String, bool) {
+    if !device_meta_json.is_empty() {
+        return (device_meta_json.to_string(), true);
     }
 
     match linux_unique_id(index) {
@@ -93,7 +93,7 @@ fn linux_unique_id(_index: u32) -> Option<String> {
 }
 
 #[pyfunction]
-pub fn query() -> PyResult<Vec<(u32, String, String, String, String, bool)>> {
+pub fn query() -> PyResult<Vec<(u32, String, String, String)>> {
     let devices = match nokhwa::query(ApiBackend::Auto) {
         Ok(val) => val,
         Err(error) => return Err(PyRuntimeError::new_err(error.to_string())),
@@ -104,15 +104,12 @@ pub fn query() -> PyResult<Vec<(u32, String, String, String, String, bool)>> {
     // Add devices normally found by nokhwa
     for device in devices.into_iter() {
         if let CameraIndex::Index(index) = *device.index() {
-            let misc = device.misc();
-            let (unique_id, id_stable) = stable_unique_id(index, &misc);
+            let device_meta_json = device.device_meta_json();
             result.push((
                 index,
                 device.human_name(),
                 device.description().to_owned(),
-                misc,
-                unique_id,
-                id_stable,
+                device_meta_json,
             ));
         }
     }
@@ -724,6 +721,21 @@ mod tests {
         }
 
         // not necessarily non-zero, but should not crash
+        assert!(devices.len() >= 0);
+    }
+
+    #[test]
+    fn test_query_cameras_pyfunction() {
+        // Exercises the #[pyfunction] `query()` exposed to Python, including the
+        // stable_unique_id resolution baked into each row.
+        let devices = crate::query().expect("Failed to query cameras");
+        println!("Found {} devices", devices.len());
+        for (index, human_name, description, device_meta_json) in &devices {
+            println!(
+                "index={index} name={human_name:?} description={description:?} device_meta_json={device_meta_json:?}"
+            );
+        }
+
         assert!(devices.len() >= 0);
     }
 
