@@ -707,7 +707,7 @@ dependencies = [
 [[package]]
 name = "nokhwa"
 version = "0.10.14"
-source = "git+https://github.com/maxxgx/nokhwa.git?rev=ba0f15e0f52fab91f3361a347569145546da9529#ba0f15e0f52fab91f3361a347569145546da9529"
+source = "git+https://github.com/maxxgx/nokhwa.git?tag=v0.10.14#600e8ca6beebbc8983e137e3e66d6a1526569503"
 dependencies = [
  "flume",
  "image",
@@ -723,7 +723,7 @@ dependencies = [
 [[package]]
 name = "nokhwa-bindings-linux"
 version = "0.1.2"
-source = "git+https://github.com/maxxgx/nokhwa.git?rev=ba0f15e0f52fab91f3361a347569145546da9529#ba0f15e0f52fab91f3361a347569145546da9529"
+source = "git+https://github.com/maxxgx/nokhwa.git?tag=v0.10.14#600e8ca6beebbc8983e137e3e66d6a1526569503"
 dependencies = [
  "libc",
  "nokhwa-core",
@@ -733,7 +733,7 @@ dependencies = [
 [[package]]
 name = "nokhwa-bindings-macos"
 version = "0.2.3"
-source = "git+https://github.com/maxxgx/nokhwa.git?rev=ba0f15e0f52fab91f3361a347569145546da9529#ba0f15e0f52fab91f3361a347569145546da9529"
+source = "git+https://github.com/maxxgx/nokhwa.git?tag=v0.10.14#600e8ca6beebbc8983e137e3e66d6a1526569503"
 dependencies = [
  "block",
  "cocoa-foundation",
@@ -750,7 +750,7 @@ dependencies = [
 [[package]]
 name = "nokhwa-bindings-windows"
 version = "0.4.4"
-source = "git+https://github.com/maxxgx/nokhwa.git?rev=ba0f15e0f52fab91f3361a347569145546da9529#ba0f15e0f52fab91f3361a347569145546da9529"
+source = "git+https://github.com/maxxgx/nokhwa.git?tag=v0.10.14#600e8ca6beebbc8983e137e3e66d6a1526569503"
 dependencies = [
  "nokhwa-core",
  "once_cell",
@@ -760,7 +760,7 @@ dependencies = [
 [[package]]
 name = "nokhwa-core"
 version = "0.1.7"
-source = "git+https://github.com/maxxgx/nokhwa.git?rev=ba0f15e0f52fab91f3361a347569145546da9529#ba0f15e0f52fab91f3361a347569145546da9529"
+source = "git+https://github.com/maxxgx/nokhwa.git?tag=v0.10.14#600e8ca6beebbc8983e137e3e66d6a1526569503"
 dependencies = [
  "bytes",
  "image",
