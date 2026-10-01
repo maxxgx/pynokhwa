@@ -706,8 +706,8 @@ dependencies = [
 
 [[package]]
 name = "nokhwa"
-version = "0.10.13"
-source = "git+https://github.com/maxxgx/nokhwa.git?tag=v0.10.13#a8e00d9ce5952cb043ae37d098d80ff097d39a7c"
+version = "0.10.14"
+source = "git+https://github.com/maxxgx/nokhwa.git?rev=ba0f15e0f52fab91f3361a347569145546da9529#ba0f15e0f52fab91f3361a347569145546da9529"
 dependencies = [
  "flume",
  "image",
@@ -723,7 +723,7 @@ dependencies = [
 [[package]]
 name = "nokhwa-bindings-linux"
 version = "0.1.2"
-source = "git+https://github.com/maxxgx/nokhwa.git?tag=v0.10.13#a8e00d9ce5952cb043ae37d098d80ff097d39a7c"
+source = "git+https://github.com/maxxgx/nokhwa.git?rev=ba0f15e0f52fab91f3361a347569145546da9529#ba0f15e0f52fab91f3361a347569145546da9529"
 dependencies = [
  "libc",
  "nokhwa-core",
@@ -733,7 +733,7 @@ dependencies = [
 [[package]]
 name = "nokhwa-bindings-macos"
 version = "0.2.3"
-source = "git+https://github.com/maxxgx/nokhwa.git?tag=v0.10.13#a8e00d9ce5952cb043ae37d098d80ff097d39a7c"
+source = "git+https://github.com/maxxgx/nokhwa.git?rev=ba0f15e0f52fab91f3361a347569145546da9529#ba0f15e0f52fab91f3361a347569145546da9529"
 dependencies = [
  "block",
  "cocoa-foundation",
@@ -750,7 +750,7 @@ dependencies = [
 [[package]]
 name = "nokhwa-bindings-windows"
 version = "0.4.4"
-source = "git+https://github.com/maxxgx/nokhwa.git?tag=v0.10.13#a8e00d9ce5952cb043ae37d098d80ff097d39a7c"
+source = "git+https://github.com/maxxgx/nokhwa.git?rev=ba0f15e0f52fab91f3361a347569145546da9529#ba0f15e0f52fab91f3361a347569145546da9529"
 dependencies = [
  "nokhwa-core",
  "once_cell",
@@ -760,7 +760,7 @@ dependencies = [
 [[package]]
 name = "nokhwa-core"
 version = "0.1.7"
-source = "git+https://github.com/maxxgx/nokhwa.git?tag=v0.10.13#a8e00d9ce5952cb043ae37d098d80ff097d39a7c"
+source = "git+https://github.com/maxxgx/nokhwa.git?rev=ba0f15e0f52fab91f3361a347569145546da9529#ba0f15e0f52fab91f3361a347569145546da9529"
 dependencies = [
  "bytes",
  "image",
@@ -934,7 +934,7 @@ checksum = "d55d956fa96f5ec02be2e13af0e20391a5aa83d6a074e3ad368959d0fab299ea"
 
 [[package]]
 name = "pynokhwa"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "image",
  "minifb",
